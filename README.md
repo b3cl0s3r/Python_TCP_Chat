@@ -42,10 +42,15 @@ Nothing for now
 
 # Client commands when running
 
-/help : show which commands you can use as client
+/help : show which commands you can use as client.
+
 /online : show who is online.
-/msg <username> <text> : send a private msg to <username> with <text> as message
+
+/msg <username> <text> : send a private msg to <username> with <text> as message.
+ 
 /clear : clear screen.
+
 /private <username> : yet not implemented. 
+ 
 /exit : exit program
  

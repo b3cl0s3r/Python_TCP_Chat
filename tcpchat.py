@@ -40,8 +40,18 @@ RESET = '\033[0m'
 PRIVATE = '\033[1;91m'
 HELP1 = '\033[1;96m'
 HELP2 = '\033[1;97m'
+WARNING = '\033[93m'
 
 # To support more than 10 connections, is needed to provide more colours or enable that colours can be more than once. Same should be done with usernames
+
+########################
+##     SERVER SIDE    ##
+########################
+
+
+#
+# CONSTRUCTOR: INICIO DEL SERVER, GESTIONA CONEXIONES, TERMINA CORRECTAMENTE EL PROGRAMA
+#
 
 class Server():
     def __init__(self, ip, port, max):
@@ -70,9 +80,9 @@ class Server():
         try:
             #Maximo max conexiones concurrentes
             serversocket.listen(max)
+            start_new_thread(self.servercommand, ())
 
             while True:
-
                 if self.clients.__len__() < max:
                     conn, addr = serversocket.accept()
                 else:
@@ -84,12 +94,17 @@ class Server():
                 start_new_thread(self.clientthread ,(conn,))
         except:
             print "\nClosing server..."
-            for i in self.clients:
-                i.sendall("!{Error_Server_OFF}")
+            os.system('stty sane')
+            if self.clients:
+                for i in self.clients:
+                    i.sendall("!{Error_Server_OFF}")
 
         finally:
             serversocket.close()
 
+#
+# HILO DE CADA CLIENTE
+#
 
     def clientthread(self,conn):
         data = conn.recv(1024)
@@ -135,6 +150,7 @@ class Server():
                 if not data or data == "/exit":
                     conn.send("See you!")
                     break
+
                 elif data == "/online":
                     data = str(self.clients.__len__())+" users are online!\n"
                     string=str()
@@ -143,35 +159,25 @@ class Server():
                     data = data+string
                     conn.send(data)
                     continue
-                elif data == "!{Error_Server_OFF}" or data == "!{Private_Message}":
+
+                elif data == "!{Error_Server_OFF}" or data == "!{Private_Message}" or data == "!{Server_Kick}":
                     continue
 
-                ## Evita que un posible atacante envie paquetes con !{Error_Server_OFF} a todos los clientes
-                ## para echarlos.
+                ## Evita que un posible atacante intente provocar bugs en la aplicación. Entre ellos, echar a todos los clientes.
 
-                # Ejemplo:
-                # b3cl0s3r: /msg roberto hola que tal
-                split = data.split(" ",1)
-                # ["b3cl0s3r:", "/msg roberto hola que tal"]
-                string = split[1].split(" ",1)
-                # ["/msg", "roberto hola que tal"]
-                name = split[0]
-                # "b3cl0s3r:"
+                try:
+                    # Ejemplo:
+                    # b3cl0s3r: /msg roberto hola que tal
+                    split = data.split(" ",1)
+                    # ["b3cl0s3r:", "/msg roberto hola que tal"]
+                    string = split[1].split(" ",1)
+                    # ["/msg", "roberto hola que tal"]
+                    name = split[0]
+                    # "b3cl0s3r:"
+                except:
+                    continue
 
-                if string[0] == "/private":
-                    try:
-                        if string[1] in self.users:
-                            pos = self.users.index(string[1])
-                            duser = string[1]
-                            private = self.clients[pos]
-                            private.send("!{Private_Message}")
-                            continue
-                        else:
-                            conn.send("That user isn't online")
-                            continue
-                    except:
-                        conn.send("Please, provide an username!")
-                        continue
+                # Mensaje privado
 
                 if string[0] == "/msg":
                     try:
@@ -206,15 +212,97 @@ class Server():
             self.users.remove(user)
             self.colors.remove(color)
 
+#
+# MUESTRA QUIEN ESTA ONLINE
+#
+
     def online (self):
         for i in self.users:
             string=string+" "+i
         return string
 
+#
+# MANDA A TODOS LOS USUARIOS EXCEPTO SU PROPIETARIO UN MENSAJE
+#
+
     def sendtoall (self, conn, data):
         for i in self.clients:
             if conn is not i:
                 i.sendall(data)
+
+#
+# MANDA A TODOS LOS USUARIOS UN MENSAJE
+#
+
+    def servertoall (self, data):
+        for i in self.clients:
+            i.sendall(data)
+
+#
+# COMANDOS DEL SERVIDOR
+#
+# help, kick, kickall, online, clear
+#
+
+    def servercommand(self):
+        while True:
+
+            message = raw_input()
+
+            if message == "/help":
+                self.help()
+                continue
+
+            elif message == "/online":
+                print str(self.clients.__len__())+" users are online!"
+                if self.users:
+                    for i in self.users:
+                        print i+" ",
+                    print ""
+                continue
+
+            elif message == "/clear":
+                os.system('cls' if os.name == 'nt' else 'clear')
+                continue
+
+            elif message == "/kickall":
+                self.servertoall("!{Server_Kick}:¿?")
+                continue
+            try:
+                # "/kick <username> <reason>"
+                split = message.split(" ",1)
+                # ["/kick", "<username> <reason>"]
+                command = split[0]
+
+                if command == "/kick":
+                    # ["<username>", "<reason>"]
+                    split = split[1].split(" ",1)
+                    username = split[0]
+                    reason = split[1]
+                    # Get pos to send the message
+                    try:
+                        pos = self.users.index(username)
+                        kick = "!{Server_Kick}"+":"+reason
+                        self.clients[pos].send(kick)
+                    except:
+                        print WARNING+username+" isn't in the server!"+RESET
+                else:
+                    print WARNING+"That command doesn't exist!"+RESET
+            except:
+                print WARNING+"/kick <username> <reason>"+RESET
+
+
+    def help(self):
+        print '\033[93m'+"Commands available: "
+        print HELP1+"/online : "+HELP2+"show who is online."
+        print HELP1+"/kick <username> <reason> : "+HELP2+"kicks someone from the server"
+        print HELP1+"/kickall : "+HELP2+"kicks everyone from the server"
+        print HELP1+"/clear : "+HELP2+"clear the screen"+RESET
+
+
+########################
+##     CLIENT SIDE    ##
+########################
 
 class Client():
 
@@ -268,6 +356,10 @@ class Client():
         finally:
             client.close()
 
+#
+# Get name from server
+#
+
     def setname(self,message, uname):
         color = re.findall('\033\[[0-9][0-9]m',message)
         self.color = color[0]
@@ -277,6 +369,10 @@ class Client():
         else:
             self.name = uname
 
+#
+# Receive messages
+#
+
     def receive(self, client):
         while True:
             message = client.recv(1024)
@@ -284,9 +380,21 @@ class Client():
                 print "Server has disconnected!"
                 self.exit = True
                 break
-            print message
-            if self.exit:
-                break
+            try:
+                cmd = message.split(":",1)
+                if cmd[0] == "!{Server_Kick}":
+                    print "You have been kicked from server! Reason: "+cmd[1]+RESET
+                    self.exit = True
+                    break
+
+            except:
+                print message
+                if self.exit:
+                    break
+
+#
+# Send messages
+#
 
     def send(self, client):
         while True:
@@ -316,7 +424,6 @@ class Client():
 
     def help(self):
         print HELP1+"/online : "+HELP2+"show who is online."
-        print HELP1+"/private <username> : "+HELP2+"start a private chat with someone"
         print HELP1+"/msg <username> <text> : "+HELP2+"send a private message to someone"
         print HELP1+"/clear : "+HELP2+"clear the screen"
         print HELP1+"/exit : "+HELP2+"leave chat"+RESET
@@ -324,6 +431,11 @@ class Client():
 # action="store_true" utiliza la opción como un bool
 # add_mutually_exclusive_group forza a que solo pueda usarse una opción de forma simultánea
 # args guarda cada opción de la linea de comandos como un atributo
+
+
+########
+# MAIN #
+########
 
 parser = argparse.ArgumentParser(description='TCP chat.')
 group = parser.add_mutually_exclusive_group(required=True)
@@ -356,3 +468,4 @@ if args.client:
     client = Client(args.ip, args.port, args.user)
 elif args.server:
     server = Server(args.ip, args.port, args.max)
+

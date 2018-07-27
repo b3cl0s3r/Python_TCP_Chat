@@ -165,17 +165,15 @@ class Server():
 
                 ## Evita que un posible atacante intente provocar bugs en la aplicación. Entre ellos, echar a todos los clientes.
 
-                try:
-                    # Ejemplo:
-                    # b3cl0s3r: /msg roberto hola que tal
-                    split = data.split(" ",1)
-                    # ["b3cl0s3r:", "/msg roberto hola que tal"]
-                    string = split[1].split(" ",1)
-                    # ["/msg", "roberto hola que tal"]
-                    name = split[0]
-                    # "b3cl0s3r:"
-                except:
-                    continue
+
+                # Ejemplo:
+                # b3cl0s3r: /msg roberto hola que tal
+                split = data.split(" ",1)
+                # ["b3cl0s3r:", "/msg roberto hola que tal"]
+                string = split[1].split(" ",1)
+                # ["/msg", "roberto hola que tal"]
+                name = split[0]
+                # "b3cl0s3r:"
 
                 # Mensaje privado
 
@@ -196,7 +194,6 @@ class Server():
                     except:
                         conn.send("Please, provide an username!")
                     continue
-
                 self.sendtoall(conn, data)
 
         except socket.error:
@@ -386,11 +383,12 @@ class Client():
                     print "You have been kicked from server! Reason: "+cmd[1]+RESET
                     self.exit = True
                     break
-
             except:
-                print message
-                if self.exit:
-                    break
+                pass
+
+            print message
+            if self.exit:
+                break
 
 #
 # Send messages
@@ -468,4 +466,3 @@ if args.client:
     client = Client(args.ip, args.port, args.user)
 elif args.server:
     server = Server(args.ip, args.port, args.max)
-

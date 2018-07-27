@@ -44,7 +44,15 @@ Note: -m option does nothing if you use it as client.
 
 # Server commands when running
 
-Nothing for now
+/help : show which commands you can use as server.
+
+/online : show who is online.
+
+/kick <username> <message> : kick someone from the server
+ 
+/kickall : kicks everyone from the server.
+ 
+/clear : clear screen.
 
 # Client commands when running
 
@@ -55,8 +63,7 @@ Nothing for now
 /msg <username> <text> : send a private msg to <username> with <text> as message.
  
 /clear : clear screen.
-
-/private <username> : yet not implemented. 
+ 
  
 /exit : exit program
  
